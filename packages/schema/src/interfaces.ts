@@ -80,6 +80,11 @@ export interface IViewPortState {
   extent: [number, number, number, number];
 }
 
+export interface IViewportMove {
+  viewport: IViewPortState;
+  emitter: string;
+}
+
 export type Pointer = {
   coordinates: { x: number; y: number };
 };
@@ -92,6 +97,8 @@ export interface IJGISLayerDocChange {
     id: string;
     oldValue: IDict;
     newValue: IJGISLayer | undefined;
+    // trail: origin - true when the change originated in this copy of the document.
+    local?: boolean;
   }>;
 }
 
@@ -109,7 +116,10 @@ export interface IJGISStoryMapDocChange {
 export interface IJGISSourceDocChange {
   sourceChange?: Array<{
     id: string;
+    // trail: resources - the source before the change, absent for an added source.
+    oldValue?: IDict;
     newValue: IJGISSource | undefined;
+    local?: boolean;
   }>;
 }
 
@@ -328,6 +338,7 @@ export interface IJupyterGISModel extends DocumentRegistry.IModel {
     IJupyterGISModel,
     IAwarenessFieldChange<IJupyterGISClientState['viewportState']>
   >;
+  viewportMoved: ISignal<IJupyterGISModel, IViewportMove>;
   identifiedFeaturesChanged: ISignal<
     IJupyterGISModel,
     IAwarenessFieldChange<IJupyterGISClientState['identifiedFeatures']>
@@ -421,6 +432,7 @@ export interface IJupyterGISModel extends DocumentRegistry.IModel {
   ): void;
 
   syncViewport(viewport?: IViewPortState, emitter?: string): void;
+  notifyViewportMoved(viewport: IViewPortState, emitter: string): void;
   syncSelected(value: { [key: string]: ISelection }, emitter?: string): void;
   selected: { [key: string]: ISelection } | undefined;
   syncLastAddedLayer(layerId: string): void;

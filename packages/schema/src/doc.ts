@@ -594,6 +594,7 @@ export class JupyterGISDoc
       id: string;
       oldValue: IDict;
       newValue: IJGISLayer;
+      local: boolean;
     }> = [];
     let needEmit = false;
     events.forEach(event => {
@@ -606,6 +607,7 @@ export class JupyterGISDoc
           id: key,
           oldValue: change.oldValue,
           newValue: raw === undefined ? undefined : JSONExt.deepCopy(raw),
+          local: event.transaction.local,
         });
       });
     });
@@ -623,7 +625,9 @@ export class JupyterGISDoc
   private _sourcesObserver(events: Y.YEvent<any>[]): void {
     const changes: Array<{
       id: string;
+      oldValue?: IDict;
       newValue: IJGISSource;
+      local: boolean;
     }> = [];
     let needEmit = false;
     events.forEach(event => {
@@ -634,7 +638,9 @@ export class JupyterGISDoc
         const raw = event.target.toJSON()[key];
         changes.push({
           id: key,
+          oldValue: change.oldValue,
           newValue: raw === undefined ? undefined : JSONExt.deepCopy(raw),
+          local: event.transaction.local,
         });
       });
     });

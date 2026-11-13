@@ -15,6 +15,7 @@ import {
   IAnnotationModel,
   IJGISFormSchemaRegistryToken,
   IAnnotationToken,
+  newDocuments,
 } from '@jupytergis/schema';
 import {
   JupyterFrontEnd,
@@ -231,6 +232,8 @@ export const notebookRendererPlugin: JupyterFrontEndPlugin<void> = {
               content: btoa(DEFAULT_JGIS_DOCUMENT_CONTENT),
               format: 'base64',
             });
+            // trail: created - the event feed reports this map's first view as created.
+            newDocuments.register(localPath);
           }
         } else {
           // If the user did not provide a path, do not create

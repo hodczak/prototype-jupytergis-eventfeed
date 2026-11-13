@@ -4,7 +4,7 @@ JupyterGIS can publish a stream of **GUI-originated events**, for example:
 
 - A user opened a document
 - A user added a layer
-- A user lingered the viewport on a geographic area
+- A user completed a local pan or zoom
 
 Tools outside JupyterGIS can subscribe to these events.
 
@@ -61,8 +61,101 @@ In JupyterLab:
 - Add a layer to the project, and observe that the consumer prints out the relevant event.
 - Remove the layer from the project, and observe that the consumer prints out the relevant event.
 - Change the layer symbology, and observe that the consumer prints out the relevant event.
-- Move the viewport, wait 10 seconds, and observe that the consumer prints out the relevant event.
+- Pan or zoom the map and observe the viewport event when the movement finishes. There is no additional settling delay.
 - Close the document, and observe that the consumer prints out the relevant event.
+- Select a map tab, select a notebook, and return to the same map. Observe document
+  `activated`, `deactivated`, and `activated` events.
+- With a map selected, switch browser tabs or windows and return. Observe focus transitions
+  without additional document `opened` events.
+
+- Create a map from the launcher, the command palette, or the file browser. Observe one
+  document `created` event and no `opened` event for that map.
+- Add a layer from a file. Observe a source `added` event and a layer `added` event, each
+  with the data reference in `object.source` or `object.new`.
+- Change the source's path. Observe a source `updated` event with the old and new references.
+  Drawing a feature into a layer produces no source event.
+- Choose Identify, press Escape, and choose Add Marker. Observe a mode `changed` event for each
+  change, numbered with the page's focus counter.
+
+### Created maps
+
+The new-map command and the notebook renderer register the path of a map they just created with
+`newDocuments` in `@jupytergis/schema`. When the emitter reports the first view of a registered
+path, it sends `document/v1` with the verb `created` in place of `opened`, and consumes the
+registration. A failed open discards the registration, and a registration expires after 30
+seconds. A map written by a script, exported by QGIS, or duplicated in the file browser is
+reported as `opened`.
+
+### Layer and source references
+
+A layer names its source by ID. The data reference lives in the source: a path, one or more URLs,
+or inline data. Layer events carry the source's reference in `object.source` on `added` and
+`removed`, and on `updated` when the layer switched sources. The emitter caches each source's last
+reference, so a removal still names the data after the orphaned source is gone. A layer written
+again unchanged, as when a dialog is closed with OK and no edits, is not reported.
+
+| Field           | Content                                                                           |
+| --------------- | --------------------------------------------------------------------------------- |
+| `id`, `type`    | The source's ID and type, such as `GeoJSONSource`.                                |
+| `path`          | The path as written, relative to the map. `null` when the path is a URL.          |
+| `resolved_path` | The Contents path JupyterGIS loads, relative to the server root.                  |
+| `tables`        | A GeoPackage source's tables.                                                     |
+| `urls`          | The source's URLs without user information, fragment, or query parameters.        |
+| `inline`        | For embedded data, the field that holds it and its size in bytes. Never the data. |
+
+URLs keep only query parameters listed in `SAFE_QUERY_PARAMETERS`, which is empty. HTTP headers,
+URL parameters, and OpenEO tokens are never reported.
+
+`source/v1` reports a source `added`, `removed`, or `updated`. `updated` means the reference
+changed, for example a new path. Edits inside inline data, such as drawn features, and bands
+detected by a GeoZarr loader are not source events.
+
+Layer and source events carry `local`, the Yjs transaction's locality. `true` means the change
+originated in the document copy that reported it. A change made from Python reaches an open map
+tab with `local: false`.
+
+### Mode changes
+
+A map model has one interaction mode: `panning`, `identifying`, `marking`, or `drawing`.
+`mode/v1` reports each change with `object.mode` and `object.previous`, once per model even when
+several views share it. The initial `panning` is not a change. Automatic resets, such as selecting
+a layer that cannot be drawn into, are reported like any other change.
+
+Mode events carry the same `frontend_id` and `focus_seq` as focus events. Before numbering a mode
+change, the focus controller publishes any pending focus transition, so a tab activation precedes
+a tool change it caused.
+
+### Execution requests
+
+The kernel broadcasts each execution's code, outputs and errors to every client, but not the
+notebook cell that asked for it. Only the page that sends an execute request knows its cell.
+`notebook/v1` reports each execute request the page sends for a notebook or console, with the
+document's path, the kernel's id, the request's `msg_id` as `request_id`, and the cell's id
+when the page supplies one. A consumer that listens to the kernel joins its IOPub messages to
+the request through their parent message id.
+
+### Document focus
+
+Standalone map tabs publish `document/v1` events with `activated` and `deactivated` verbs.
+A map is active when it is the current main-area widget in a visible page that has focus.
+Moving keyboard focus to a sidebar or dialog keeps the selected map context.
+The initial active map is reported with reason `initial_state`.
+
+Focus events include `frontend_id`, a random UUID for this loaded page, `focus_seq`, an
+increasing counter across its maps, and `time`, the browser's observation time.
+The object includes `widget_id` and `reason` alongside `document_path`.
+Use page identity and sequence to order focus transitions; `subject` remains the map copy's
+Yjs client ID. The new metadata is optional in the schema to preserve older lifecycle events.
+
+These events identify a page losing focus, not the application that received it. Browser chrome
+can also cause focus loss. They do not report embedded notebook-map focus, and shells without
+a current-widget signal do not publish focus events. Page termination can lose the final event.
+Document paths still have the rename and drive limitations described below. This first step
+does not add room IDs, cross-event stream sequencing, retries, or replay after disconnection.
+
+Feature-specific integration points use `// trail: <feature> - <purpose>` in TypeScript and
+`# trail: <feature> - <purpose>` in Python or YAML. These comments describe implemented behavior;
+`trail-todo:` is reserved for unfinished work.
 
 ## Why emit events?
 
@@ -265,15 +358,25 @@ Consumers filter client-side on the `https://schema.jupytergis.org/` prefix.
 Per-schema subscription endpoints are only a partially implemented server feature;
 prefix filtering is the reliable approach.
 
-### High-frequency events need throttling
+### Viewport events report completed navigation
 
-We haven't yet implemented viewport pan/zoom or pointer move events.
-These events fire rapidly and would be unreasonable to record them all.
+Each completed local pan or zoom emits one `viewport/v1` event. The map reads
+its final center, zoom and extent at OpenLayers `moveend`, then sends a local
+`viewportMoved` signal through the document model to the event-feed plugin.
+The plugin emits immediately. Continuous movement and animation can postpone
+`moveend`; there is no additional inactivity timer and no wait for tile loading.
 
-When we implement high frequency events we need to think about the proper way to
-throttle them.
-For viewport pan/zoom, we should start out with only firing these events after the
-animation has settled for a fixed period of time (i.e. the viewport is "lingering").
+Drag, wheel/trackpad, touch, keyboard navigation and zoom controls are tracked.
+Initialization, resizing, follow/unfollow restoration and application camera
+operations do not emit local navigation events. Application camera operations
+clear pending navigation with `ViewportMoves.suppress()` before moving the view.
+The existing awareness stream remains separate for collaboration.
+
+Each map view owns and disposes its navigation tracker. One feed subscription
+belongs to each document model, so closing one of several views leaves the
+remaining views connected. Separate completed movements produce separate events.
+
+Pointer movement events remain unimplemented.
 
 (evolving-a-schema)=
 

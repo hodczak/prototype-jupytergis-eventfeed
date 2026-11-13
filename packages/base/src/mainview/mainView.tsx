@@ -165,6 +165,7 @@ import {
   type PatchGeoJSONFeatureAttributes,
 } from './geoJsonFeaturePatch';
 import { MainViewModel } from './mainviewmodel';
+import { createViewportInteractions, ViewportMoves } from './viewportMoves';
 import { ensureHighlightLayer } from '../features/identify/utils/highlightLayer';
 import { buildHighlightStyle } from '../features/identify/utils/highlightStyle';
 import {
@@ -293,6 +294,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
     this._mainViewModel.viewSettingChanged.connect(this._onViewChanged, this);
 
     this._model = this._mainViewModel.jGISModel;
+    this._documentPath = this._model.filePath;
     this._patchGeoJSONFeatureAttributes = createGeoJSONFeaturePatcher({
       model: this._model,
       persistAndRefreshSource: this.persistAndRefreshSource,
@@ -452,6 +454,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
   }
 
   componentWillUnmount(): void {
+    this._viewportMoves?.dispose();
     if (window.jupytergisMaps !== undefined && this._documentPath) {
       delete window.jupytergisMaps[this._documentPath];
     }
@@ -559,6 +562,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
       this._Map = new OlMap({
         target: this.divRef.current,
         keyboardEventTarget: document,
+        interactions: createViewportInteractions(),
         layers: [],
         view: new View({
           center,
@@ -567,6 +571,14 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
         }),
         controls,
       });
+
+      this._viewportMoves = new ViewportMoves(
+        this._Map,
+        viewport =>
+          this._model.notifyViewportMoved(viewport, this._mainViewModel.id),
+        () => this._model.localState?.remoteUser != null,
+        controlsToolbar,
+      );
 
       // Add map interactions
       const dragAndDropInteraction = new DragAndDrop({
@@ -2309,6 +2321,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
     const view = this._Map.getView();
     const extent = geometry.getExtent();
 
+    this._viewportMoves?.suppress();
     view.fit(extent, {
       padding: [50, 50, 50, 50],
       duration: 1000,
@@ -2674,6 +2687,9 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
     }
 
     const remoteUser = localState.remoteUser;
+    if (remoteUser != null || this.state.remoteUser != null) {
+      this._viewportMoves?.suppress();
+    }
     const clients = this._model.sharedModel.awareness.getStates() as Map<
       number,
       IJupyterGISClientState
@@ -2828,6 +2844,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
   }
 
   private async updateOptions(options: IJGISOptions): Promise<void> {
+    this._viewportMoves?.suppress();
     const {
       projection,
       extent,
@@ -3492,6 +3509,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
               ? transformExtent(bboxExtent, 'EPSG:4326', viewProjection)
               : bboxExtent;
 
+          this._viewportMoves?.suppress();
           this._Map.getView().fit(transformedExtent, {
             size: this._Map.getSize(),
             duration: 500,
@@ -3565,6 +3583,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
       return;
     }
 
+    this._viewportMoves?.suppress();
     this._Map.getView().fit(transformedExtent, {
       size: this._Map.getSize(),
       duration: 500,
@@ -3576,6 +3595,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
     zoom: number,
     duration = 1000,
   ) {
+    this._viewportMoves?.suppress();
     const view = this._Map.getView();
 
     view.setZoom(zoom);
@@ -3596,6 +3616,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
     duration = 1000,
     transitionType?: 'linear' | 'immediate' | 'smooth',
   ) {
+    this._viewportMoves?.suppress();
     const view = this._Map.getView();
 
     // Cancel any in-progress animations before starting new ones
@@ -4390,6 +4411,7 @@ export class MainView extends React.Component<IMainViewProps, IStates> {
   private storyViewerPanelRef = React.createRef<IStoryViewerPanelHandle>();
   private storyScrollContainerRef = React.createRef<HTMLDivElement>();
   private _Map: OlMap;
+  private _viewportMoves?: ViewportMoves;
   private _zoomControl?: Zoom;
   private _model: IJupyterGISModel;
   private _geolocation?: Geolocation;

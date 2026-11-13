@@ -1,4 +1,5 @@
 {
+  "annotations": {},
   "layerTree": [
     "54e0ea1f-32fd-4ff2-90fb-ad449a38f902",
     "f909d9b9-bf07-42f6-8841-8d6470665dcb",
@@ -17,22 +18,79 @@
     "df947252-afb1-489f-8bce-7057318a50e3": {
       "name": "Subset of Manhattan roads",
       "parameters": {
-        "color": {
-          "circle-fill-color": "#dc8add",
-          "circle-radius": 5.0,
-          "circle-stroke-color": "#5c677a",
-          "circle-stroke-line-cap": "round",
-          "circle-stroke-line-join": "round",
-          "circle-stroke-width": 1.25,
-          "fill-color": "#dc8add",
-          "stroke-color": "#5c677a",
-          "stroke-line-cap": "round",
-          "stroke-line-join": "round",
-          "stroke-width": 1.25
-        },
         "opacity": 1.0,
         "source": "c3215d81-4b47-4b93-ae1c-5eb0fe8a68a8",
-        "symbologyState": {}
+        "symbologyState": {
+          "layers": [
+            {
+              "id": "28613bd5-3f2b-4c16-9f2f-8a033f8c07b1",
+              "rules": [
+                {
+                  "id": "04807584-3466-422f-ab07-384bf150edb1",
+                  "mappings": [
+                    {
+                      "encodings": [
+                        "fill-color",
+                        "circle-fill-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            220.0,
+                            138.0,
+                            221.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-color",
+                        "circle-stroke-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            92.0,
+                            103.0,
+                            122.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-width",
+                        "circle-stroke-width"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 1.25
+                        },
+                        "scheme": "constant_num"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "circle-radius"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 5.0
+                        },
+                        "scheme": "constant_num"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
       },
       "type": "VectorLayer",
       "visible": true
@@ -40,22 +98,79 @@
     "f909d9b9-bf07-42f6-8841-8d6470665dcb": {
       "name": "Administrative boundaries",
       "parameters": {
-        "color": {
-          "circle-fill-color": "#b78cc3",
-          "circle-radius": 5.0,
-          "circle-stroke-color": "#3399CC",
-          "circle-stroke-line-cap": "round",
-          "circle-stroke-line-join": "round",
-          "circle-stroke-width": 1.25,
-          "fill-color": "#b78cc3",
-          "stroke-color": "#3399CC",
-          "stroke-line-cap": "round",
-          "stroke-line-join": "round",
-          "stroke-width": 1.25
-        },
         "opacity": 1.0,
         "source": "eb4b68da-eab6-44a1-8e75-ca9c871d2755",
-        "symbologyState": {}
+        "symbologyState": {
+          "layers": [
+            {
+              "id": "e8b2d6f4-9a50-4050-a5dd-b954bb063ff0",
+              "rules": [
+                {
+                  "id": "42f30f7a-a742-46ec-9095-182a019ae41e",
+                  "mappings": [
+                    {
+                      "encodings": [
+                        "fill-color",
+                        "circle-fill-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            183.0,
+                            140.0,
+                            195.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-color",
+                        "circle-stroke-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            51.0,
+                            153.0,
+                            204.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-width",
+                        "circle-stroke-width"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 1.25
+                        },
+                        "scheme": "constant_num"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "circle-radius"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 5.0
+                        },
+                        "scheme": "constant_num"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
       },
       "type": "VectorLayer",
       "visible": true
@@ -65,18 +180,19 @@
   "options": {
     "bearing": 0.0,
     "extent": [
-      -13079618.77363639,
-      -6596060.360822033,
-      16270193.12589785,
-      12638663.19259264
+      -1295879.1311358875,
+      -20037508.342789244,
+      15809640.465607997,
+      20037508.342789244
     ],
-    "latitude": 26.179270968888744,
-    "longitude": 14.330708528781068,
+    "latitude": 0.0,
+    "longitude": 65.18966818409619,
     "pitch": 0.0,
     "projection": "EPSG:3857",
-    "zoom": 2.2854022188622487
+    "zoom": 2.5343028824546305
   },
-  "schemaVersion": "0.5.0",
+  "presets": {},
+  "schemaVersion": "0.6.0",
   "sources": {
     "780c4234-ba6d-4da2-9731-739f6c4d8033": {
       "name": "OpenStreetMap.Mapnik",
@@ -116,5 +232,6 @@
       "type": "ShapefileSource"
     }
   },
-  "stories": {}
+  "stories": {},
+  "viewState": {}
 }

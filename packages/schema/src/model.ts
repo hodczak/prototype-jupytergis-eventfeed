@@ -48,6 +48,7 @@ import {
   IStorySegmentRef,
   IUserData,
   IViewPortState,
+  IViewportMove,
   JgisCoordinates,
   Pointer,
   IJupyterGISSettings,
@@ -659,6 +660,14 @@ export class JupyterGISModel implements IJupyterGISModel {
 
   getOptions(): IJGISOptions {
     return this._sharedModel.options;
+  }
+
+  readonly viewportMoved = new Signal<this, IViewportMove>(this);
+
+  notifyViewportMoved(viewport: IViewPortState, emitter: string): void {
+    if (!this.isDisposed) {
+      this.viewportMoved.emit({ viewport, emitter });
+    }
   }
 
   syncViewport(viewport?: IViewPortState, emitter?: string): void {

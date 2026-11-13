@@ -20,6 +20,7 @@ import {
   ProcessingMerge,
   IJGISFormSchemaRegistry,
   IJGISFormSchemaRegistryToken,
+  newDocuments,
 } from '@jupytergis/schema';
 import {
   JupyterFrontEnd,
@@ -289,11 +290,19 @@ const activate = async (
         content: DEFAULT_JGIS_DOCUMENT_CONTENT,
       });
 
+      // trail: created - the event feed reports the first view of this path as created.
+      newDocuments.register(model.path);
+
       // Open the newly created file with the 'Editor'
-      return app.commands.execute('docmanager:open', {
-        path: model.path,
-        factory: FACTORY,
-      });
+      try {
+        return await app.commands.execute('docmanager:open', {
+          path: model.path,
+          factory: FACTORY,
+        });
+      } catch (error) {
+        newDocuments.discard(model.path);
+        throw error;
+      }
     },
   });
 

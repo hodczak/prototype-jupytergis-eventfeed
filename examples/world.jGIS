@@ -1,4 +1,5 @@
 {
+  "annotations": {},
   "layerTree": [
     "6e55cdae-35b0-4bff-9dd1-c8aa9563b2a6",
     "f80d0fa2-3e2b-4922-b7d5-fefd4b085259"
@@ -10,28 +11,35 @@
         "opacity": 1.0,
         "source": "b4287bea-e217-443c-b527-58f7559c824c",
         "symbologyState": {
-          "colorRamp": "cool",
-          "fallbackColor": [
-            0.0,
-            0.0,
-            0.0,
-            0.0
-          ],
-          "method": "color",
-          "mode": "equal interval",
-          "nClasses": 9.0,
-          "radius": 5.0,
-          "reverseRamp": false,
-          "strokeColor": [
-            51.0,
-            153.0,
-            204.0,
-            1.0
-          ],
-          "strokeFollowsFill": false,
-          "strokeWidth": 1.25,
-          "vmax": 18.0,
-          "vmin": 1.0
+          "layers": [
+            {
+              "id": "52ecdb45-f110-4ed4-8d7e-baf7c5af8580",
+              "rules": [
+                {
+                  "id": "918d0f07-2035-4190-a3d5-b7cb54017070",
+                  "mappings": [
+                    {
+                      "encodings": [
+                        "fill-color",
+                        "circle-fill-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            128.0,
+                            128.0,
+                            128.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       },
       "type": "VectorLayer",
@@ -40,22 +48,79 @@
     "f80d0fa2-3e2b-4922-b7d5-fefd4b085259": {
       "name": "France",
       "parameters": {
-        "color": {
-          "circle-fill-color": "#c01c28",
-          "circle-radius": 5.0,
-          "circle-stroke-color": "#1c71d8",
-          "circle-stroke-line-cap": "round",
-          "circle-stroke-line-join": "round",
-          "circle-stroke-width": 1.25,
-          "fill-color": "#c01c28",
-          "stroke-color": "#1c71d8",
-          "stroke-line-cap": "round",
-          "stroke-line-join": "round",
-          "stroke-width": 1.25
-        },
         "opacity": 1.0,
         "source": "5970d6c9-26be-4cc6-84c9-16593dd3edfe",
-        "symbologyState": {}
+        "symbologyState": {
+          "layers": [
+            {
+              "id": "674453a8-1089-408b-a0cb-35a5e7aa26bd",
+              "rules": [
+                {
+                  "id": "8358c1bc-32b3-43c1-b995-d9e1d213a80b",
+                  "mappings": [
+                    {
+                      "encodings": [
+                        "fill-color",
+                        "circle-fill-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            192.0,
+                            28.0,
+                            40.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-color",
+                        "circle-stroke-color"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": [
+                            28.0,
+                            113.0,
+                            216.0,
+                            1.0
+                          ]
+                        },
+                        "scheme": "constant_rgba"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "stroke-width",
+                        "circle-stroke-width"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 1.25
+                        },
+                        "scheme": "constant_num"
+                      }
+                    },
+                    {
+                      "encodings": [
+                        "circle-radius"
+                      ],
+                      "scale": {
+                        "params": {
+                          "value": 5.0
+                        },
+                        "scheme": "constant_num"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
       },
       "type": "VectorLayer",
       "visible": true
@@ -65,18 +130,19 @@
   "options": {
     "bearing": 0.0,
     "extent": [
-      -7804330.790911825,
-      -17406763.264961343,
-      28543797.03441047,
+      -10184347.036748802,
+      -20037508.342789244,
+      10082856.276928788,
       20037508.342789244
     ],
-    "latitude": 11.733312406978698,
-    "longitude": 93.15289755507854,
+    "latitude": 0.0,
+    "longitude": -0.4558535037161173,
     "pitch": 0.0,
     "projection": "EPSG:3857",
-    "zoom": 1.8360503550580693
+    "zoom": 2.5343028824546305
   },
-  "schemaVersion": "0.5.0",
+  "presets": {},
+  "schemaVersion": "0.6.0",
   "sources": {
     "5970d6c9-26be-4cc6-84c9-16593dd3edfe": {
       "name": "France",
@@ -93,5 +159,6 @@
       "type": "GeoJSONSource"
     }
   },
-  "stories": {}
+  "stories": {},
+  "viewState": {}
 }

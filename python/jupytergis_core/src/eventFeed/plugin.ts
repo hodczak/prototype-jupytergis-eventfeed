@@ -3,14 +3,20 @@ import {
   IJupyterGISModel,
   IJupyterGISTracker,
   IJupyterGISWidget,
-  IViewPortState,
+  newDocuments,
 } from '@jupytergis/schema';
 import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin,
 } from '@jupyterlab/application';
 import type { Event } from '@jupyterlab/services';
-import type { JSONObject } from '@lumino/coreutils';
+import { JSONExt, type JSONObject } from '@lumino/coreutils';
+
+import { wireShellExecutions } from './executions';
+import { DocumentFocus } from './focus';
+import { wireModeEvents } from './mode';
+import { isSameReference, SourceReferences } from './sources';
+import { wireViewportEvents } from './viewport';
 
 interface IEventWiringProps {
   widget: IJupyterGISWidget;
@@ -18,20 +24,26 @@ interface IEventWiringProps {
   emit: (request: Event.Request) => void;
 }
 
-const wireDocumentEvents = ({
+const LAYER_SCHEMA = 'https://schema.jupytergis.org/events/layer/v1';
+const SOURCE_SCHEMA = 'https://schema.jupytergis.org/events/source/v1';
+
+export const wireDocumentEvents = ({
   widget,
   clientId,
   emit,
 }: IEventWiringProps): void => {
   const DOCUMENT_SCHEMA = 'https://schema.jupytergis.org/events/document/v1';
+  const path = widget.model.filePath || null;
+  // trail: created - the first view of a map JupyterGIS just made reports created, not opened.
+  const verb = path && newDocuments.consume(path) ? 'created' : 'opened';
 
   emit({
     schema_id: DOCUMENT_SCHEMA,
     version: '1',
     data: {
       subject: clientId,
-      verb: 'opened',
-      object: { document_path: widget.model.filePath || null },
+      verb,
+      object: { document_path: path },
     },
   });
 
@@ -48,16 +60,34 @@ const wireDocumentEvents = ({
   });
 };
 
-const wireLayerEvents = ({
-  widget,
-  clientId,
-  emit,
-}: IEventWiringProps): void => {
-  const LAYER_SCHEMA = 'https://schema.jupytergis.org/events/layer/v1';
-
+export const wireLayerEvents = (
+  { widget, clientId, emit }: IEventWiringProps,
+  references: SourceReferences,
+): void => {
   widget.model.sharedLayersChanged.connect((_, change) => {
-    for (const { id, oldValue, newValue } of change.layerChange ?? []) {
+    for (const { id, oldValue, newValue, local } of change.layerChange ?? []) {
       const verb = !oldValue ? 'added' : !newValue ? 'removed' : 'updated';
+      // trail: no-op - pressing OK in a dialog without edits writes the same layer again.
+      if (
+        verb === 'updated' &&
+        JSONExt.deepEqual(
+          oldValue as unknown as JSONObject,
+          newValue as unknown as JSONObject,
+        )
+      ) {
+        continue;
+      }
+      const oldSource = oldValue?.parameters?.source as string | undefined;
+      const newSource = newValue?.parameters?.source as string | undefined;
+      // trail: resources - an update names its source only when the layer switched sources.
+      let source;
+      if (verb === 'added') {
+        source = references.get(newSource);
+      } else if (verb === 'removed') {
+        source = references.get(oldSource);
+      } else if (oldSource !== newSource) {
+        source = references.get(newSource);
+      }
 
       emit({
         schema_id: LAYER_SCHEMA,
@@ -65,11 +95,13 @@ const wireLayerEvents = ({
         data: {
           subject: clientId,
           verb,
+          ...(local === undefined ? {} : { local }),
           object: {
             document_path: widget.model.filePath || null,
             layer_id: id,
             ...(oldValue ? { old: oldValue as unknown as JSONObject } : {}), // TODO: Better typing
             ...(newValue ? { new: newValue as unknown as JSONObject } : {}), // TODO: Better typing
+            ...(source ? { source: source as unknown as JSONObject } : {}),
           },
         },
       });
@@ -77,54 +109,43 @@ const wireLayerEvents = ({
   });
 };
 
-const wireViewportEvents = ({
-  widget,
-  clientId,
-  emit,
-}: IEventWiringProps): void => {
-  const VIEWPORT_SCHEMA = 'https://schema.jupytergis.org/events/viewport/v1';
-  // Awareness syncs the viewport every 200ms while the map moves, which is too
-  // noisy for an event feed, so we throttle harder.
-  // TODO: Should throttling be the client's responsibility?
-  const VIEWPORT_SETTLE_MS = 10_000;
+export const wireSourceEvents = (
+  { widget, clientId, emit }: IEventWiringProps,
+  references: SourceReferences,
+): void => {
+  widget.model.sharedSourcesChanged.connect((_, change) => {
+    for (const { id, oldValue, newValue, local } of change.sourceChange ?? []) {
+      // trail: resources - the old value comes from Yjs, not the cache another handler may update.
+      const previous = oldValue ? references.compute(id, oldValue) : undefined;
+      const current = newValue ? references.remember(id, newValue) : undefined;
+      let verb: 'added' | 'updated' | 'removed';
+      if (!previous && current) {
+        verb = 'added';
+      } else if (previous && !current) {
+        verb = 'removed';
+      } else if (previous && current && !isSameReference(previous, current)) {
+        verb = 'updated';
+      } else {
+        // trail: resources - edits inside inline data or detected bands are not source events.
+        continue;
+      }
 
-  let pendingViewportState: IViewPortState | undefined;
-  let publishTimeoutId: number | undefined;
-
-  const publishPendingViewport = (): void => {
-    if (!pendingViewportState) {
-      return;
-    }
-    emit({
-      schema_id: VIEWPORT_SCHEMA,
-      version: '1',
-      data: {
-        subject: clientId,
-        verb: 'moved',
-        object: {
-          document_path: widget.model.filePath || null,
-          new: pendingViewportState as unknown as JSONObject,
+      emit({
+        schema_id: SOURCE_SCHEMA,
+        version: '1',
+        data: {
+          subject: clientId,
+          verb,
+          ...(local === undefined ? {} : { local }),
+          object: {
+            document_path: widget.model.filePath || null,
+            source_id: id,
+            ...(previous ? { old: previous as unknown as JSONObject } : {}),
+            ...(current ? { new: current as unknown as JSONObject } : {}),
+          },
         },
-      },
-    });
-    pendingViewportState = undefined;
-  };
-
-  widget.model.viewportStateChanged.connect((_, change) => {
-    // Collaborators' viewports arrive here too. Only our own movement counts.
-    if (!change.isLocalClient || !change.currentValue?.value) {
-      return;
+      });
     }
-
-    pendingViewportState = change.currentValue.value;
-
-    // Restart the clock on every movement, so one event is published once the
-    // viewport has been still for VIEWPORT_SETTLE_MS.
-    window.clearTimeout(publishTimeoutId);
-    publishTimeoutId = window.setTimeout(
-      publishPendingViewport,
-      VIEWPORT_SETTLE_MS,
-    );
   });
 };
 
@@ -142,7 +163,13 @@ export const eventFeedPlugin: JupyterFrontEndPlugin<void> = {
       });
     };
 
+    const focus = new DocumentFocus({ shell: app.shell, tracker, emit });
+    wireShellExecutions(app.shell, emit);
+
     const wireJupyterGISEvents = (widget: IJupyterGISWidget): void => {
+      // trail: focus - each view needs focus tracking even when views share a model.
+      focus.add(widget);
+
       // Two widgets can share the same model. We only want to connect these
       // handlers once per document.
       if (wiredModels.has(widget.model)) {
@@ -158,6 +185,7 @@ export const eventFeedPlugin: JupyterFrontEndPlugin<void> = {
       };
 
       wireDocumentEvents(eventWiringProps);
+      wireModeEvents(widget.model, focus, emit);
 
       // When the document loads, a bunch of signals come through, e.g. all the
       // existing layers come through as 'added' events (among other events).
@@ -165,9 +193,16 @@ export const eventFeedPlugin: JupyterFrontEndPlugin<void> = {
       // spam as those signals fire. We only care about the events triggered by
       // the user intentionally, so we wait until the document's initial sync
       // is complete to wire these signals.
-      void widget.model.sharedModel.initialSyncReady.then(() => {
-        wireLayerEvents(eventWiringProps);
-        wireViewportEvents(eventWiringProps);
+      const model = widget.model;
+      void model.sharedModel.initialSyncReady.then(() => {
+        if (model.isDisposed) {
+          return;
+        }
+        const references = new SourceReferences(model);
+        references.seed();
+        wireLayerEvents(eventWiringProps, references);
+        wireSourceEvents(eventWiringProps, references);
+        wireViewportEvents(model, emit);
       });
     };
 

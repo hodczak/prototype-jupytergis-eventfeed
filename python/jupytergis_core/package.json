@@ -26,6 +26,7 @@
     "url": "https://github.com/geojupyter/jupytergis.git"
   },
   "scripts": {
+    "test": "jest",
     "build": "pnpm run build:lib && pnpm run build:labextension:dev",
     "build:prod": "pnpm run clean && pnpm run build:lib:prod && pnpm run build:labextension",
     "build:labextension": "jupyter-builder build . && pnpm run cp:sqlwasm",

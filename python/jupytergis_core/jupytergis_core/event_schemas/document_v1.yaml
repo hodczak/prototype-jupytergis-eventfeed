@@ -1,7 +1,7 @@
 "$id": "https://schema.jupytergis.org/events/document/v1"
 version: "1"
 title: "JupyterGIS document event"
-description: "A JupyterGIS document was opened or closed (either as standalone document or in a Notebook widget) in the GUI."
+description: "A JupyterGIS document was created, opened, closed, activated or deactivated in the GUI. `created` replaces `opened` for the first view of a map that JupyterGIS just created. Activation describes a standalone map selected in a visible, focused page."
 type: "object"
 required:
   - "verb"
@@ -13,10 +13,28 @@ properties:
     type: "string"
   verb:
     title: "Verb"
-    description: "Document lifecycle action"
+    description: "Document lifecycle or focus action"
     enum:
+      # trail: created - sent in place of opened for the first view of a new map.
+      - "created"
       - "opened"
       - "closed"
+      - "activated"
+      - "deactivated"
+  # trail: focus - optional metadata preserves existing opened and closed messages.
+  time:
+    description: "UTC time when the browser observed the focus transition."
+    type: "string"
+    format: "date-time"
+  frontend_id:
+    description: "Random UUID for one loaded browser page, not a person."
+    type: "string"
+    format: "uuid"
+    pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+  focus_seq:
+    description: "Increasing focus-transition counter across all maps in this page."
+    type: "integer"
+    minimum: 1
   object:
     title: "Object"
     description: "The thing that `verb` was performed on."
@@ -28,3 +46,16 @@ properties:
         title: "Document path"
         description: "The path of the `.jGIS` document, or `null` if ephemeral."
         type: ["string", "null"]
+      widget_id:
+        description: "Widget ID within the reporting browser page."
+        type: "string"
+      reason:
+        description: "Observed cause of a focus transition; does not name another application."
+        enum:
+          - "initial_state"
+          - "document_switch"
+          - "window_focused"
+          - "window_blurred"
+          - "page_visible"
+          - "page_hidden"
+          - "widget_closed"
